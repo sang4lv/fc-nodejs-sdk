@@ -556,16 +556,18 @@ describe('client test', function () {
     // no exception = ok
   }
 
-  async function createTrigger(client, serviceName, functionName, triggerName, triggerType, triggerConfig) {
+  async function createTrigger(client, serviceName, functionName, triggerName, desc, triggerType, triggerConfig) {
     const trigger = await client.createTrigger(serviceName, functionName, {
       invocationRole: `acs:ram::${ACCOUNT_ID}:role/fc-test`,
       sourceArn: `acs:oss:cn-shanghai:${ACCOUNT_ID}:${triggerBucketName}`,
       triggerName: triggerName,
+      description: desc,
       triggerType: triggerType,
       triggerConfig: triggerConfig
     });
     expect(trigger.data).to.be.ok();
     expect(trigger.data).to.have.property('triggerName', triggerName);
+    expect(trigger.data).to.have.property('description', desc);
     // sleep a while for trigger meta to sync
     await new Promise(res => setTimeout(res, 30 * 1000));
   }
@@ -573,6 +575,7 @@ describe('client test', function () {
   describe('http trigger should be ok', function () {
     const functionName = 'http-echo';
     const triggerName = 'http-trigger';
+    const createTriggerDesc = 'create http trigger';
     const client = new FunctionComputeClient(ACCOUNT_ID, {
       accessKeyID: ACCESS_KEY_ID,
       accessKeySecret: ACCESS_KEY_SECRET,
@@ -595,12 +598,13 @@ describe('client test', function () {
         'authType': 'function',		// `function` level here to make sure working well for signature.
         'methods': ['GET', 'POST', 'PUT']
       };
-      await createTrigger(client, serviceName, functionName, triggerName, 'http', triggerConfig);
+      await createTrigger(client, serviceName, functionName, triggerName, createTriggerDesc, 'http', triggerConfig);
     });
 
     it('getTrigger should be ok', async function () {
       const trigger = await client.getTrigger(serviceName, functionName, triggerName);
       expect(trigger.data).to.have.property('triggerName', triggerName);
+      expect(trigger.data).to.have.property('description', createTriggerDesc);
     });
 
     it('send `GET` request to access http function should be ok', async function () {
@@ -637,6 +641,7 @@ describe('client test', function () {
   describe('oss trigger should be ok', function () {
     const functionName = 'hello-world';
     const triggerName = 'image_resize';
+    const createTriggerDesc = 'create oss trigger';
     const client = new FunctionComputeClient(ACCOUNT_ID, {
       accessKeyID: ACCESS_KEY_ID,
       accessKeySecret: ACCESS_KEY_SECRET,
@@ -661,7 +666,7 @@ describe('client test', function () {
           }
         }
       };
-      await createTrigger(client, serviceName, functionName, triggerName, 'oss', triggerConfig);
+      await createTrigger(client, serviceName, functionName, triggerName, createTriggerDesc, 'oss', triggerConfig);
     });
 
     it('listTriggers should be ok', async function () {
@@ -671,18 +676,24 @@ describe('client test', function () {
       expect(response.data.triggers).to.have.length(1);
       const [trigger] = response.data.triggers;
       expect(trigger).to.have.property('triggerName', triggerName);
+      expect(trigger).to.have.property('description', createTriggerDesc);
     });
 
     it('getTrigger should be ok', async function () {
       const trigger = await client.getTrigger(serviceName, functionName, triggerName);
       expect(trigger.data).to.have.property('triggerName', triggerName);
+      expect(trigger.data).to.have.property('description', createTriggerDesc);
+
     });
 
     it('updateTrigger should be ok', async function () {
+      const updateTriggerDesc = 'update oss trigger';
       const trigger = await client.updateTrigger(serviceName, functionName, triggerName, {
         invocationRole: `acs:ram::${ACCOUNT_ID}:role/fc-test-updated`,
+        description: updateTriggerDesc,
       });
       expect(trigger.data).to.have.property('triggerName', triggerName);
+      expect(trigger.data).to.have.property('description', updateTriggerDesc);
       expect(trigger.data).to.have.property('invocationRole', `acs:ram::${ACCOUNT_ID}:role/fc-test-updated`);
     });
 
